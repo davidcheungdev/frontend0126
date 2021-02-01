@@ -73,16 +73,10 @@ jobs:
   deploy:
       name: Deploy
       runs-on: ubuntu-latest
-      # strategy:
-      #   matrix:
-      #     include:
-      #       - env: stage
-      #         bucket: app0126-stage.zero-david.online
       needs: build
       strategy:
         matrix: ${{ fromJSON(needs.build.outputs.approved-deploy) }}
       env:
-        # bucket: "app0126-stage.zero-david.online"
         region: "us-east-2"
       steps:
       # Checkout the code
@@ -114,6 +108,8 @@ jobs:
     needs: [build, deploy]
     runs-on: ubuntu-latest
     name: production-deploy
+    env:
+      region: "us-east-2"
     strategy:
       matrix: ${{ fromJSON(needs.build.outputs.needs-approval) }}
     steps:
