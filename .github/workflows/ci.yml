@@ -22,7 +22,7 @@ jobs:
       - name: ls -la
         run: ls -la
       - id: deploy
-        uses: ./../.github/workflows/actions/deploy
+        uses: ./.github/workflows/actions/deploy
         with:
           bucket: a
           region: us-east-2
