@@ -24,10 +24,10 @@ jobs:
       - id: deploy
         uses: ./../.github/workflows/actions/deploy
         with:
-          bucket: ${{ matrix.bucket }}
+          bucket: a
           region: us-east-2
-          artifact_name: build-artifact-${{ matrix.env }}
-          env: ${{ matrix.env }}
+          artifact_name: b
+          env: c
     # Run Tests
       # - name: Run Unit Tests
       #   uses: actions/setup-node@v1
