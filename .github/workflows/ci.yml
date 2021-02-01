@@ -19,68 +19,8 @@ jobs:
     steps:
     # Checkout the code
       - uses: actions/checkout@v2
-    # Run Tests
-      - name: Run Unit Tests
-        uses: actions/setup-node@v1
-        with:
-          node-version: 14.x
-      - run: |
-          yarn
-          yarn test --watchAll=false
-  build:
-      strategy:
-        matrix:
-          include:
-          - env: stage
-            bucket: app0126-stage.zero-david.online
-          - env: production
-            bucket: app0126.zero-david.online
-      outputs:
-        needs-approval: "${{ steps.needs-approval.outputs.needs-approval }}"
-        approved-deploy: "${{ steps.approved-deploy.outputs.approved-deploy }}"
-      needs: unit-test
-      runs-on: ubuntu-latest
-      env:
-        CI: true
-      steps:
-      # Checkout the code
-        - uses: actions/checkout@v2
-      # Build Code
-        - name: Build Static Site
-          uses: actions/setup-node@v1
-          with:
-            node-version: 12.x
-        - run: |
-            yarn
-            yarn build
-            ls -al
-          env:
-            REACT_APP_CONFIG: ${{ matrix.env }}
-      # Upload build to github artifact
-        - name: Upload build artifact to Github
-          uses: actions/upload-artifact@v1
-          with:
-            name: build-artifact-${{ matrix.env }}
-            path: build/
-        - name: needs-approval
-          id: needs-approval
-          if: ${{ matrix.env == 'production' }}
-          run: echo "::set-output name=needs-approval::{\"include\":[{\"env\":\"${{ matrix.env }}\",\"buildName\":\"build-artifact-${{ matrix.env }}\",\"bucket\":\"app0126.zero-david.online\"}]}"
-        - name: approved-deploy
-          id: approved-deploy
-          if: ${{ matrix.env == 'stage' }}
-          run: echo "::set-output name=approved-deploy::{\"include\":[{\"env\":\"${{ matrix.env }}\",\"buildName\":\"build-artifact-${{ matrix.env }}\",\"bucket\":\"app0126-stage.zero-david.online\"}]}"
-  deploy:
-      name: Deploy
-      runs-on: ubuntu-latest
-      needs: build
-      strategy:
-        matrix: ${{ fromJSON(needs.build.outputs.approved-deploy) }}
-      env:
-        region: "us-east-2"
-      steps:
-      # Checkout the code
-      - uses: actions/checkout@v2
+      - name: ls -la
+        run: ls -la
       - id: deploy
         uses: ./../.github/workflows/actions/deploy
         with:
@@ -88,6 +28,75 @@ jobs:
           region: us-east-2
           artifact_name: build-artifact-${{ matrix.env }}
           env: ${{ matrix.env }}
+    # Run Tests
+      # - name: Run Unit Tests
+      #   uses: actions/setup-node@v1
+      #   with:
+      #     node-version: 14.x
+      # - run: |
+      #     yarn
+      #     yarn test --watchAll=false
+  # build:
+  #     strategy:
+  #       matrix:
+  #         include:
+  #         - env: stage
+  #           bucket: app0126-stage.zero-david.online
+  #         - env: production
+  #           bucket: app0126.zero-david.online
+  #     outputs:
+  #       needs-approval: "${{ steps.needs-approval.outputs.needs-approval }}"
+  #       approved-deploy: "${{ steps.approved-deploy.outputs.approved-deploy }}"
+  #     needs: unit-test
+  #     runs-on: ubuntu-latest
+  #     env:
+  #       CI: true
+  #     steps:
+  #     # Checkout the code
+  #       - uses: actions/checkout@v2
+  #     # Build Code
+  #       - name: Build Static Site
+  #         uses: actions/setup-node@v1
+  #         with:
+  #           node-version: 12.x
+  #       - run: |
+  #           yarn
+  #           yarn build
+  #           ls -al
+  #         env:
+  #           REACT_APP_CONFIG: ${{ matrix.env }}
+  #     # Upload build to github artifact
+  #       - name: Upload build artifact to Github
+  #         uses: actions/upload-artifact@v1
+  #         with:
+  #           name: build-artifact-${{ matrix.env }}
+  #           path: build/
+  #       - name: needs-approval
+  #         id: needs-approval
+  #         if: ${{ matrix.env == 'production' }}
+  #         run: echo "::set-output name=needs-approval::{\"include\":[{\"env\":\"${{ matrix.env }}\",\"buildName\":\"build-artifact-${{ matrix.env }}\",\"bucket\":\"app0126.zero-david.online\"}]}"
+  #       - name: approved-deploy
+  #         id: approved-deploy
+  #         if: ${{ matrix.env == 'stage' }}
+  #         run: echo "::set-output name=approved-deploy::{\"include\":[{\"env\":\"${{ matrix.env }}\",\"buildName\":\"build-artifact-${{ matrix.env }}\",\"bucket\":\"app0126-stage.zero-david.online\"}]}"
+  # deploy:
+  #     name: Deploy
+  #     runs-on: ubuntu-latest
+  #     needs: build
+  #     strategy:
+  #       matrix: ${{ fromJSON(needs.build.outputs.approved-deploy) }}
+  #     env:
+  #       region: "us-east-2"
+  #     steps:
+  #     # Checkout the code
+  #     - uses: actions/checkout@v2
+  #     - id: deploy
+  #       uses: ./../.github/workflows/actions/deploy
+  #       with:
+  #         bucket: ${{ matrix.bucket }}
+  #         region: us-east-2
+  #         artifact_name: build-artifact-${{ matrix.env }}
+  #         env: ${{ matrix.env }}
   # production-deploy:
   #   needs: [build, deploy]
   #   runs-on: ubuntu-latest
