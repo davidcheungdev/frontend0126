@@ -81,7 +81,7 @@ jobs:
       steps:
       # Checkout the code
       - id: deploy
-        uses: .github/workflows/deploy
+        uses: ./.github/workflows/deploy
         with:
           bucket: ${{ matrix.bucket }}
           region: us-east-2
