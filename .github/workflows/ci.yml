@@ -81,7 +81,7 @@ jobs:
       steps:
       # Checkout the code
       - id: deploy
-        uses: action/deploy@v1
+        uses: actions/deploy@v1
         with:
           bucket: ${{ matrix.bucket }}
           region: us-east-2
