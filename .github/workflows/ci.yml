@@ -18,23 +18,15 @@ jobs:
       build_env: production
     steps:
     # Checkout the code
-      - uses: actions/checkout@v2
-      # - name: ls -la
-      #   run: ls -la
-      # - uses: ./.github/actions/deploy
-      #   with:
-      #     bucket: a
-      #     region: us-east-2
-      #     artifact_name: b
-      #     env: c
+    - uses: actions/checkout@v2
     # Run Tests
-      - name: Run Unit Tests
-        uses: actions/setup-node@v1
-        with:
-          node-version: 14.x
-      - run: |
-          yarn
-          yarn test --watchAll=false
+    - name: Run Unit Tests
+      uses: actions/setup-node@v1
+      with:
+        node-version: 14.x
+    - run: |
+        yarn
+        yarn test --watchAll=false
   build:
       strategy:
         matrix:
