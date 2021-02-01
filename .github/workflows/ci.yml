@@ -69,7 +69,7 @@ jobs:
         - name: approved-deploy
           id: approved-deploy
           if: ${{ matrix.env == 'stage' }}
-          run: echo "::set-output name=approved-deploy::{\"excludes\":[{\"env\":\"${{ matrix.env }}\",\"buildName\":\"build-artifact-${{ matrix.env }}\",\"bucket\":\"app0126-stage.zero-david.online\"}]}"
+          run: echo "::set-output name=approved-deploy::{\"include\":[{\"env\":\"${{ matrix.env }}\",\"buildName\":\"build-artifact-${{ matrix.env }}\",\"bucket\":\"app0126-stage.zero-david.online\"}]}"
   deploy:
       name: Deploy
       runs-on: ubuntu-latest
