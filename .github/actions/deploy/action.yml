@@ -19,11 +19,13 @@ runs:
   steps:
     # Deploy to s3
     - name: Sync with S3
+      shell: bash
       run: |
         cd build
         aws s3 sync . s3://${{ input.artifact_name }}
     # Invalidate Cloudfront
     - name: Invalidate Cloudfront
+      shell: bash
       run: |
         export DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?@=='${{ input.bucket }}']].Id | [0]" | tr -d '"')
         aws cloudfront create-invalidation --distribution-id ${DIST_ID} --paths "/*"
