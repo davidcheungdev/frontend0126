@@ -81,7 +81,7 @@ jobs:
       steps:
       # Checkout the code
       - id: deploy
-        uses: ../.github/workflows/actions/deploy@v1
+        uses: ./../.github/workflows/linters/codeQuality
         with:
           bucket: ${{ matrix.bucket }}
           region: us-east-2
