@@ -80,6 +80,7 @@ jobs:
         region: "us-east-2"
       steps:
       # Checkout the code
+      - uses: actions/checkout@v2
       - id: deploy
         uses: ./../.github/workflows/actions/deploy
         with:
