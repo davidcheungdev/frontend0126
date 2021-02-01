@@ -1,0 +1,44 @@
+name: deploy
+description: download artifacts by name, s3 sync to bucket, cf invalidate
+inputs:
+  region:  # id of input
+    description: 'Aws region the S3 bucket is located'
+    required: true
+    default: 'us-west-2'
+  env:  # id of input
+    description: 'environment to build'
+    required: true
+  bucket:
+    description: 'AWS S3 Bucket to host the website'
+    required: true
+  artifact_name:
+    description: 'Built artifact of frontend assets'
+    required: true
+runs:
+  using: "composite"
+  steps:
+  # Checkout the code
+    - uses: actions/checkout@v2
+    # Configure Aws account for S3 Sync
+    - name: Configure AWS credentials for S3 sync
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ input.region }}
+    # Upload build to github artifact
+    - name: Download build artifact from Github
+      uses: actions/download-artifact@v1
+      with:
+        name: ${{ input.env }}
+        path: build/
+    # Deploy to s3
+    - name: Sync with S3
+      run: |
+        cd build
+        aws s3 sync . s3://${{ input.artifact_name }}
+    # Invalidate Cloudfront
+    - name: Invalidate Cloudfront
+      run: |
+        export DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?@=='${{ input.bucket }}']].Id | [0]" | tr -d '"')
+        aws cloudfront create-invalidation --distribution-id ${DIST_ID} --paths "/*"
