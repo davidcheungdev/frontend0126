@@ -36,7 +36,8 @@ jobs:
           - env: production
             bucket: app0126.zero-david.online
       outputs:
-        needs-approval: "${{ steps.set-output.outputs.value }}"
+        needs-approval: "${{ steps.needs-approval.outputs.needs-approval }}"
+        approved-deploy: "${{ steps.approved-deploy.outputs.approved-deploy }}"
       needs: unit-test
       runs-on: ubuntu-latest
       env:
@@ -61,28 +62,25 @@ jobs:
           with:
             name: build-artifact-${{ matrix.env }}
             path: build/
-        - name: set-output
-          id: set-output
+        - name: needs-approval
+          id: needs-approval
           if: ${{ matrix.env == 'production' }}
-          run: echo "::set-output name=value::{\"include\":[{\"env\":\"production\",\"buildName\":\"build-artifact-${{ matrix.env }}\"}]}"
-  production-deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    name: production-deploy
-    strategy:
-      matrix: ${{ fromJSON(needs.build.outputs.needs-approval) }}
-    steps:
-    - name: echo
-      run: echo "needs ${{ needs.build.outputs.needs-approval }}"
+          run: echo "::set-output name=needs-approval::{\"include\":[{\"env\":\"${{ matrix.env }}\",\"buildName\":\"build-artifact-${{ matrix.env }}\",\"bucket\":\"app0126.zero-david.online\"}]}"
+        - name: approved-deploy
+          id: approved-deploy
+          if: ${{ matrix.env == 'stage' }}
+          run: echo "::set-output name=approved-deploy::{\"excludes\":[{\"env\":\"${{ matrix.env }}\",\"buildName\":\"build-artifact-${{ matrix.env }}\",\"bucket\":\"app0126-stage.zero-david.online\"}]}"
   deploy:
       name: Deploy
       runs-on: ubuntu-latest
-      strategy:
-        matrix:
-          include:
-            - env: stage
-              bucket: app0126-stage.zero-david.online
+      # strategy:
+      #   matrix:
+      #     include:
+      #       - env: stage
+      #         bucket: app0126-stage.zero-david.online
       needs: build
+      strategy:
+        matrix: ${{ fromJSON(needs.build.outputs.approved-deploy) }}
       env:
         # bucket: "app0126-stage.zero-david.online"
         region: "us-east-2"
@@ -112,3 +110,35 @@ jobs:
           run: |
             export DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?@=='${{ matrix.bucket }}']].Id | [0]" | tr -d '"')
             aws cloudfront create-invalidation --distribution-id ${DIST_ID} --paths "/*"
+  production-deploy:
+    needs: [build, deploy]
+    runs-on: ubuntu-latest
+    name: production-deploy
+    strategy:
+      matrix: ${{ fromJSON(needs.build.outputs.needs-approval) }}
+    steps:
+    # Checkout the code
+      - uses: actions/checkout@v2
+      # Configure Aws account for S3 Sync
+      - name: Configure AWS credentials for S3 sync
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.region }}
+      # Upload build to github artifact
+      - name: Download build artifact from Github
+        uses: actions/download-artifact@v1
+        with:
+          name: build-artifact-${{ matrix.env }}
+          path: build/
+      # Deploy to s3
+      - name: Sync with S3
+        run: |
+          cd build
+          aws s3 sync . s3://${{ matrix.bucket }}
+      # Invalidate Cloudfront
+      - name: Invalidate Cloudfront
+        run: |
+          export DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?@=='${{ matrix.bucket }}']].Id | [0]" | tr -d '"')
+          aws cloudfront create-invalidation --distribution-id ${DIST_ID} --paths "/*"
