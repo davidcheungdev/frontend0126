@@ -81,7 +81,6 @@ jobs:
       steps:
       # Checkout the code
       - uses: actions/checkout@v2
-      - id: deploy
       # Configure Aws account for S3 Sync
       - name: Configure AWS credentials for S3 sync
         uses: aws-actions/configure-aws-credentials@v1
@@ -96,6 +95,7 @@ jobs:
           name: ${{ input.env }}
           path: build/
       - uses: ./.github/actions/deploy
+        id: deploy
         with:
           bucket: ${{ matrix.bucket }}
           region: us-east-2
