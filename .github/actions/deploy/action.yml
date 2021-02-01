@@ -22,7 +22,7 @@ runs:
       shell: bash
       run: |
         cd build
-        aws s3 sync . s3://${{ inputs.artifact_name }}
+        aws s3 sync . s3://${{ inputs.bucket }}
     # Invalidate Cloudfront
     - name: Invalidate Cloudfront
       shell: bash
