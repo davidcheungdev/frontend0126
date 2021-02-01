@@ -17,21 +17,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-  # Checkout the code
-    - uses: actions/checkout@v2
-    # Configure Aws account for S3 Sync
-    - name: Configure AWS credentials for S3 sync
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ input.region }}
-    # Upload build to github artifact
-    - name: Download build artifact from Github
-      uses: actions/download-artifact@v1
-      with:
-        name: ${{ input.env }}
-        path: build/
     # Deploy to s3
     - name: Sync with S3
       run: |
