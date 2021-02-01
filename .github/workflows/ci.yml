@@ -94,44 +94,56 @@ jobs:
         with:
           name: build-artifact-${{ matrix.env }}
           path: build/
-      - uses: ./.github/actions/deploy
-        id: deploy
+      # Deploy to s3
+      - name: Sync with S3
+        shell: bash
+        run: |
+          cd build
+          aws s3 sync . s3://${{ matrix.bucket }}
+      # Invalidate Cloudfront
+      - name: Invalidate Cloudfront
+        shell: bash
+        run: |
+          export DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?@=='${{ matrix.bucket }}']].Id | [0]" | tr -d '"')
+          aws cloudfront create-invalidation --distribution-id ${DIST_ID} --paths "/*"
+      # - uses: ./.github/actions/deploy
+      #   id: deploy
+      #   with:
+      #     bucket: ${{ matrix.bucket }}
+      #     region: us-east-2
+      #     artifact_name: build-artifact-${{ matrix.env }}
+      #     env: ${{ matrix.env }}
+  production-deploy:
+    needs: [build, deploy]
+    runs-on: ubuntu-latest
+    name: production-deploy
+    env:
+      region: "us-east-2"
+    strategy:
+      matrix: ${{ fromJSON(needs.build.outputs.needs-approval) }}
+    steps:
+    # Checkout the code
+      - uses: actions/checkout@v2
+      # Configure Aws account for S3 Sync
+      - name: Configure AWS credentials for S3 sync
+        uses: aws-actions/configure-aws-credentials@v1
         with:
-          bucket: ${{ matrix.bucket }}
-          region: us-east-2
-          artifact_name: build-artifact-${{ matrix.env }}
-          env: ${{ matrix.env }}
-  # production-deploy:
-  #   needs: [build, deploy]
-  #   runs-on: ubuntu-latest
-  #   name: production-deploy
-  #   env:
-  #     region: "us-east-2"
-  #   strategy:
-  #     matrix: ${{ fromJSON(needs.build.outputs.needs-approval) }}
-  #   steps:
-  #   # Checkout the code
-  #     - uses: actions/checkout@v2
-  #     # Configure Aws account for S3 Sync
-  #     - name: Configure AWS credentials for S3 sync
-  #       uses: aws-actions/configure-aws-credentials@v1
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ env.region }}
-  #     # Upload build to github artifact
-  #     - name: Download build artifact from Github
-  #       uses: actions/download-artifact@v1
-  #       with:
-  #         name: build-artifact-${{ matrix.env }}
-  #         path: build/
-  #     # Deploy to s3
-  #     - name: Sync with S3
-  #       run: |
-  #         cd build
-  #         aws s3 sync . s3://${{ matrix.bucket }}
-  #     # Invalidate Cloudfront
-  #     - name: Invalidate Cloudfront
-  #       run: |
-  #         export DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?@=='${{ matrix.bucket }}']].Id | [0]" | tr -d '"')
-  #         aws cloudfront create-invalidation --distribution-id ${DIST_ID} --paths "/*"
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.region }}
+      # Upload build to github artifact
+      - name: Download build artifact from Github
+        uses: actions/download-artifact@v1
+        with:
+          name: build-artifact-${{ matrix.env }}
+          path: build/
+      # Deploy to s3
+      - name: Sync with S3
+        run: |
+          cd build
+          aws s3 sync . s3://${{ matrix.bucket }}
+      # Invalidate Cloudfront
+      - name: Invalidate Cloudfront
+        run: |
+          export DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?@=='${{ matrix.bucket }}']].Id | [0]" | tr -d '"')
+          aws cloudfront create-invalidation --distribution-id ${DIST_ID} --paths "/*"
