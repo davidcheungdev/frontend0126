@@ -11,7 +11,7 @@ jobs:
       build_env: production
     steps:
     - uses: actions/checkout@v2
-    - name: Run Unit Tests
+    - name: Run Lint
       uses: actions/setup-node@v1
       with:
         node-version: 14.x
