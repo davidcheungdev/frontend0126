@@ -1,6 +1,6 @@
 # .github/workflows/prod-pipeline.yml
 # This is a github action pipeline for production.
-name: Production Deployment
+name: Test-Build-Deploy
 on:
   push:
     branches: [master]
@@ -27,7 +27,12 @@ jobs:
     - run: |
         yarn
         yarn test --watchAll=false
+    - name: should-build-and-deploy
+      id: should-build-and-deploy
+      if: github.ref != 'refs/heads/master'
+      run: echo "::set-output name=needs-approval::{\"include\":[{\"env\":\"${{ matrix.env }}\",\"buildName\":\"build-artifact-${{ matrix.env }}\",\"bucket\":\"${{ matrix.bucket }}\"}]}"
   build:
+      if: github.ref == 'refs/heads/master'
       strategy:
         matrix:
           include:
@@ -62,14 +67,15 @@ jobs:
           with:
             name: build-artifact-${{ matrix.env }}
             path: build/
+        ## The outputs set provide data and set matrix for the deploy steps
         - name: needs-approval
           id: needs-approval
           if: ${{ matrix.env == 'production' }}
-          run: echo "::set-output name=needs-approval::{\"include\":[{\"env\":\"${{ matrix.env }}\",\"buildName\":\"build-artifact-${{ matrix.env }}\",\"bucket\":\"app0126.zero-david.online\"}]}"
+          run: echo "::set-output name=needs-approval::{\"include\":[{\"env\":\"${{ matrix.env }}\",\"buildName\":\"build-artifact-${{ matrix.env }}\",\"bucket\":\"${{ matrix.bucket }}\"}]}"
         - name: approved-deploy
           id: approved-deploy
           if: ${{ matrix.env == 'stage' }}
-          run: echo "::set-output name=approved-deploy::{\"include\":[{\"env\":\"${{ matrix.env }}\",\"buildName\":\"build-artifact-${{ matrix.env }}\",\"bucket\":\"app0126-stage.zero-david.online\"}]}"
+          run: echo "::set-output name=approved-deploy::{\"include\":[{\"env\":\"${{ matrix.env }}\",\"buildName\":\"build-artifact-${{ matrix.env }}\",\"bucket\":\"${{ matrix.bucket }}\"}]}"
   deploy:
       name: Deploy
       runs-on: ubuntu-latest
