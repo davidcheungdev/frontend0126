@@ -27,12 +27,12 @@ jobs:
     - run: |
         yarn
         yarn test --watchAll=false
-    - name: should-build-and-deploy
-      id: should-build-and-deploy
-      if: github.ref != 'refs/heads/master'
-      run: echo "::set-output name=needs-approval::{\"include\":[{\"env\":\"${{ matrix.env }}\",\"buildName\":\"build-artifact-${{ matrix.env }}\",\"bucket\":\"${{ matrix.bucket }}\"}]}"
   build:
       if: github.ref == 'refs/heads/master'
+      needs: unit-test
+      runs-on: ubuntu-latest
+      env:
+        CI: true
       strategy:
         matrix:
           include:
@@ -43,10 +43,6 @@ jobs:
       outputs:
         needs-approval: "${{ steps.needs-approval.outputs.needs-approval }}"
         approved-deploy: "${{ steps.approved-deploy.outputs.approved-deploy }}"
-      needs: unit-test
-      runs-on: ubuntu-latest
-      env:
-        CI: true
       steps:
       # Checkout the code
         - uses: actions/checkout@v2
