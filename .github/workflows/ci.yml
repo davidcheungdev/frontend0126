@@ -1,6 +1,6 @@
 # .github/workflows/prod-pipeline.yml
 # This is a github action pipeline for production.
-name: Test-Build-Deploy
+name: ci pipeline
 on:
   push:
     branches: [master]
@@ -25,6 +25,7 @@ jobs:
         yarn
         yarn test --watchAll=false
   build:
+      # To only builds on `master` branch
       if: github.ref == 'refs/heads/master'
       needs: unit-test
       runs-on: ubuntu-latest
