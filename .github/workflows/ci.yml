@@ -1,14 +1,9 @@
-# .github/workflows/prod-pipeline.yml
-# This is a github action pipeline for production.
-name: Test-Build-Deploy
+name: CI Pipeline
 on:
   push:
     branches: [master]
-  workflow_dispatch:
-    inputs:
-      git-ref:
-        description: Git Ref (Optional)
-        required: false
+  pull_request:
+    branches: ['*']
 # Jobs
 jobs:
   unit-test:
@@ -17,9 +12,7 @@ jobs:
       CI: true
       build_env: production
     steps:
-    # Checkout the code
     - uses: actions/checkout@v2
-    # Run Tests
     - name: Run Unit Tests
       uses: actions/setup-node@v1
       with:
@@ -27,12 +20,14 @@ jobs:
     - run: |
         yarn
         yarn test --watchAll=false
-    - name: should-build-and-deploy
-      id: should-build-and-deploy
-      if: github.ref != 'refs/heads/master'
-      run: echo "::set-output name=needs-approval::{\"include\":[{\"env\":\"${{ matrix.env }}\",\"buildName\":\"build-artifact-${{ matrix.env }}\",\"bucket\":\"${{ matrix.bucket }}\"}]}"
   build:
+      # Using condition to only builds on `master` branch
+      # Github actions does not have branch option for excluding steps for branches
       if: github.ref == 'refs/heads/master'
+      needs: unit-test
+      runs-on: ubuntu-latest
+      env:
+        CI: true
       strategy:
         matrix:
           include:
@@ -43,31 +38,34 @@ jobs:
       outputs:
         needs-approval: "${{ steps.needs-approval.outputs.needs-approval }}"
         approved-deploy: "${{ steps.approved-deploy.outputs.approved-deploy }}"
-      needs: unit-test
-      runs-on: ubuntu-latest
-      env:
-        CI: true
       steps:
-      # Checkout the code
         - uses: actions/checkout@v2
-      # Build Code
         - name: Build Static Site
           uses: actions/setup-node@v1
           with:
-            node-version: 12.x
+            node-version: 14.x
         - run: |
             yarn
             yarn build
-            ls -al
           env:
             REACT_APP_CONFIG: ${{ matrix.env }}
-      # Upload build to github artifact
         - name: Upload build artifact to Github
           uses: actions/upload-artifact@v1
           with:
             name: build-artifact-${{ matrix.env }}
             path: build/
-        ## The outputs set provide data and set matrix for the deploy steps
+        ## This sets `step.outputs` is picked up by `jobs.outputs`, then when the step deploy reads `jobs.outputs`
+        ## this provides data and set matrix for the deploy steps. This allows us to specify the data once
+        ## and have the subsequence step can pass along the information created during this step.
+        # the Deploy step will have a strategy matrix as follows:
+        # {
+        #   "include": [{
+        #     "env": "stage",
+        #     "buildName": "build-artifact-stage",
+        #     "bucket": "app.mydomain.com"
+        #   }]
+        # }
+        ##
         - name: needs-approval
           id: needs-approval
           if: ${{ matrix.env == 'production' }}
@@ -81,74 +79,65 @@ jobs:
       runs-on: ubuntu-latest
       needs: build
       strategy:
+        # with `needs` declared, the job will have access to the output of the needed step
+        # and in the needed step(`build`) we have the output of what should be instantly deployed
         matrix: ${{ fromJSON(needs.build.outputs.approved-deploy) }}
       env:
-        region: "us-east-2"
+        region: us-east-2
       steps:
-      # Checkout the code
+      # Once github action supports nested composite actions (anything `uses` is a composite action)
+      # Therefore we cannot reuse the code as a separate composite action until it supports it,
+      # current the deploy logic is in this file twice because of it
+      ## https://github.com/actions/runner/issues/862
       - uses: actions/checkout@v2
-      # Configure Aws account for S3 Sync
       - name: Configure AWS credentials for S3 sync
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-2
-      # Upload build to github artifact
       - name: Download build artifact from Github
         uses: actions/download-artifact@v1
         with:
-          name: build-artifact-${{ matrix.env }}
+          name: ${{ matrix.buildName }}
           path: build/
-      # Deploy to s3
       - name: Sync with S3
         shell: bash
         run: |
           cd build
           aws s3 sync . s3://${{ matrix.bucket }}
-      # Invalidate Cloudfront
       - name: Invalidate Cloudfront
         shell: bash
         run: |
           export DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?@=='${{ matrix.bucket }}']].Id | [0]" | tr -d '"')
           aws cloudfront create-invalidation --distribution-id ${DIST_ID} --paths "/*"
-      # - uses: ./.github/actions/deploy
-      #   id: deploy
-      #   with:
-      #     bucket: ${{ matrix.bucket }}
-      #     region: us-east-2
-      #     artifact_name: build-artifact-${{ matrix.env }}
-      #     env: ${{ matrix.env }}
   production-deploy:
     needs: [build, deploy]
     runs-on: ubuntu-latest
     name: production-deploy
     env:
-      region: "us-east-2"
+      region: us-east-2
+    # with `needs` declared, the job will have access to the output of the needed step
+    # and in the needed step(`build`) we have the output of what should be instantly deployed
     strategy:
       matrix: ${{ fromJSON(needs.build.outputs.needs-approval) }}
     steps:
-    # Checkout the code
       - uses: actions/checkout@v2
-      # Configure Aws account for S3 Sync
       - name: Configure AWS credentials for S3 sync
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.region }}
-      # Upload build to github artifact
       - name: Download build artifact from Github
         uses: actions/download-artifact@v1
         with:
-          name: build-artifact-${{ matrix.env }}
+          name: ${{ matrix.buildName }}
           path: build/
-      # Deploy to s3
       - name: Sync with S3
         run: |
           cd build
           aws s3 sync . s3://${{ matrix.bucket }}
-      # Invalidate Cloudfront
       - name: Invalidate Cloudfront
         run: |
           export DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?@=='${{ matrix.bucket }}']].Id | [0]" | tr -d '"')
