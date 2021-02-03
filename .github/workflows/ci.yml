@@ -12,8 +12,7 @@ jobs:
     - run: echo "TEST_RESPONSE_COD=$(curl -o /dev/null -s -w \"%{http_code}\" https://app0126-stage.zero-david.online)" >> $GITHUB_ENV
     - run: echo ${{ env.TEST_RESPONSE_COD }}
     - if: ${{ env.TEST_RESPONSE_COD != 200 }}
-      run: |
-        RESPONSE_CODE=$(curl -o /dev/null -s -w "%{http_code}\n" https://app0126-stage.zero-david.online)
+      run: exit 1
   unit-test:
     needs: [integration-test]
     runs-on: ubuntu-latest
