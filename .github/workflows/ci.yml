@@ -3,6 +3,14 @@ on:
   push:
     branches: [master, main]
 jobs:
+  integration-test:
+    # needs: [build, deploy]
+    runs-on: ubuntu-latest
+    name: integration-test
+    steps:
+    - if: ${{ $(curl -o /dev/null -s -w "%{http_code}" https://app0126-stage.zero-david.online) != "200" }}
+      run: |
+        RESPONSE_CODE=$(curl -o /dev/null -s -w "%{http_code}\n" https://app0126-stage.zero-david.online)
   unit-test:
     runs-on: ubuntu-latest
     env:
@@ -72,7 +80,6 @@ jobs:
       name: Deploy
       runs-on: ubuntu-latest
       needs: build
-      
       strategy:
         # with `needs` declared, the job will have access to the output of the needed step
         # and in the needed step(`build`) we have the output of what should be instantly deployed
@@ -106,8 +113,9 @@ jobs:
         run: |
           export DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?@=='${{ matrix.bucket }}']].Id | [0]" | tr -d '"')
           aws cloudfront create-invalidation --distribution-id ${DIST_ID} --paths "/*"
+
   production-deploy:
-    needs: [build, deploy]
+    needs: [build, integration-test]
     runs-on: ubuntu-latest
     name: production-deploy
     environment:
