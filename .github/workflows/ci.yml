@@ -106,7 +106,7 @@ jobs:
           export DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?@=='${{ matrix.bucket }}']].Id | [0]" | tr -d '"')
           aws cloudfront create-invalidation --distribution-id ${DIST_ID} --paths "/*"
   integration-test:
-    needs: [build, deploy]
+    needs: [deploy]
     runs-on: ubuntu-latest
     name: integration-test
     steps:
@@ -115,7 +115,7 @@ jobs:
     - if: ${{env.TEST_RESPONSE_COD != '"200"'}}
       run: exit 1
   production-deploy:
-    needs: [build, deploy]
+    needs: [build, integration-test]
     runs-on: ubuntu-latest
     name: production-deploy
     env:

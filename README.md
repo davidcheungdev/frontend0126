@@ -31,6 +31,7 @@ The *Deploy* step does a:
 To learn more your pipeline checkout your [CircleCi config file](.circleci/config.yml)
 ___
 
+## Github actions
 
 ## Environment Configs
 
