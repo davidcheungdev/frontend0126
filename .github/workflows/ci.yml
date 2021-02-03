@@ -3,18 +3,7 @@ on:
   push:
     branches: [master, main]
 jobs:
-  integration-test:
-    # needs: [build, deploy]
-    runs-on: ubuntu-latest
-    name: integration-test
-    
-    steps:
-    - run: echo "TEST_RESPONSE_COD=$(curl -o /dev/null -s -w \"%{http_code}\" https://app0126-stage.zero-david.online)" >> $GITHUB_ENV
-    - run: echo "\"${{ env.TEST_RESPONSE_COD }}\""
-    - if: ${{env.TEST_RESPONSE_COD != '"200"'}}
-      run: exit 1
   unit-test:
-    needs: [integration-test]
     runs-on: ubuntu-latest
     env:
       CI: true
@@ -116,13 +105,19 @@ jobs:
         run: |
           export DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?@=='${{ matrix.bucket }}']].Id | [0]" | tr -d '"')
           aws cloudfront create-invalidation --distribution-id ${DIST_ID} --paths "/*"
-
+  integration-test:
+    needs: [build, deploy]
+    runs-on: ubuntu-latest
+    name: integration-test
+    steps:
+    ## smoke test against staging env before deploying to production
+    - run: echo "TEST_RESPONSE_COD=$(curl -o /dev/null -s -w \"%{http_code}\" https://app0126-stage.zero-david.online)" >> $GITHUB_ENV
+    - if: ${{env.TEST_RESPONSE_COD != '"200"'}}
+      run: exit 1
   production-deploy:
-    needs: [build, integration-test]
+    needs: [build, deploy]
     runs-on: ubuntu-latest
     name: production-deploy
-    environment:
-      name: production
     env:
       region: us-east-2
     # with `needs` declared, the job will have access to the output of the needed step
