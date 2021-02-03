@@ -11,7 +11,7 @@ jobs:
     steps:
     - run: echo "::set-env name=TEST_RESPONSE_COD::$(curl -o /dev/null -s -w \"%{http_code}\" https://app0126-stage.zero-david.online)"
     - run: echo ${{ env.TEST_RESPONSE_COD }}
-    - if: ${{ env.TEST_RESPONSE_COD != "200" }}
+    - if: ${{ env.TEST_RESPONSE_COD != 200 }}
       run: |
         RESPONSE_CODE=$(curl -o /dev/null -s -w "%{http_code}\n" https://app0126-stage.zero-david.online)
   unit-test:
