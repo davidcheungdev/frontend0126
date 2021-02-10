@@ -25,7 +25,7 @@ jobs:
       strategy:
         matrix:
           include:
-          - env: stage
+          - env: staging
             bucket: app0126-stage.zero-david.online
           - env: production
             bucket: app0126.zero-david.online
@@ -110,7 +110,8 @@ jobs:
     runs-on: ubuntu-latest
     name: integration-test
     steps:
-    ## smoke test against staging env before deploying to production
+    ## Example of smoke test against staging env before deploying to production
+    ## To be enhanced to more sophisicated checks
     - run: echo "TEST_RESPONSE_COD=$(curl -o /dev/null -s -w \"%{http_code}\" https://app0126-stage.zero-david.online)" >> $GITHUB_ENV
     - if: ${{env.TEST_RESPONSE_COD != '"200"'}}
       run: exit 1

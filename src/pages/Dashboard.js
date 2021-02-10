@@ -17,7 +17,6 @@ const fetchDashboard = async(data) => new Promise((resolve) => {
   setTimeout(fakeFetchData, 500);
 })
 
- 
 function Dashboard() {
   const { state: authState } = useContext(AuthContext)
   const [state, setState] = useState({
