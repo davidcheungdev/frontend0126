@@ -37,6 +37,9 @@ const generateFormRequestUrl = async (type) => {
   if (type === "settings") {
     url = url.replace(/\/flows$/, '');
   }
+  if (type === "login") {
+    url = url + "?return_to=" + encodeURIComponent("https://zero-david.online");
+  }
   return authPublicURL + url;
 }
 
