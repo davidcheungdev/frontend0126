@@ -84,27 +84,28 @@ jobs:
       # current the deploy logic is in this file twice because of it
       ## https://github.com/actions/runner/issues/862
       - uses: actions/checkout@v2
-      - name: Configure AWS credentials for S3 sync
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-2
-      - name: Download build artifact from Github
-        uses: actions/download-artifact@v1
-        with:
-          name: ${{ matrix.buildName }}
-          path: build/
-      - name: Sync with S3
-        shell: bash
-        run: |
-          cd build
-          aws s3 sync . s3://${{ matrix.bucket }}
-      - name: Invalidate Cloudfront
-        shell: bash
-        run: |
-          export DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?@=='${{ matrix.bucket }}']].Id | [0]" | tr -d '"')
-          aws cloudfront create-invalidation --distribution-id ${DIST_ID} --paths "/*"
+      - run: echo "do nothing instead"
+#       - name: Configure AWS credentials for S3 sync
+#         uses: aws-actions/configure-aws-credentials@v1
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: us-east-2
+#       - name: Download build artifact from Github
+#         uses: actions/download-artifact@v1
+#         with:
+#           name: ${{ matrix.buildName }}
+#           path: build/
+#       - name: Sync with S3
+#         shell: bash
+#         run: |
+#           cd build
+#           aws s3 sync . s3://${{ matrix.bucket }}
+#       - name: Invalidate Cloudfront
+#         shell: bash
+#         run: |
+#           export DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?@=='${{ matrix.bucket }}']].Id | [0]" | tr -d '"')
+#           aws cloudfront create-invalidation --distribution-id ${DIST_ID} --paths "/*"
   integration-test:
     needs: [deploy]
     runs-on: ubuntu-latest
@@ -112,9 +113,10 @@ jobs:
     steps:
     ## Example of smoke test against staging env before deploying to production
     ## To be enhanced to more sophisicated checks
-    - run: echo "TEST_RESPONSE_COD=$(curl -o /dev/null -s -w \"%{http_code}\" https://app0126-stage.zero-david.online)" >> $GITHUB_ENV
-    - if: ${{env.TEST_RESPONSE_COD != '"200"'}}
-      run: exit 1
+#     - run: echo "TEST_RESPONSE_COD=$(curl -o /dev/null -s -w \"%{http_code}\" https://app0126-stage.zero-david.online)" >> $GITHUB_ENV
+#     - if: ${{env.TEST_RESPONSE_COD != '"200"'}}
+#       run: exit 1
+    - run: echo "pretend to test"
   production-deploy:
     needs: [build, integration-test]
     runs-on: ubuntu-latest
