@@ -118,6 +118,7 @@ jobs:
 #       run: exit 1
     - run: echo "pretend to test"
   production-deploy:
+    environment: production
     needs: [build, integration-test]
     runs-on: ubuntu-latest
     name: production-deploy
